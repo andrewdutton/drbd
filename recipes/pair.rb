@@ -41,17 +41,17 @@ end
 
 #first pass only, initialize drbd
 execute ":create drbd volume" do
-  command "drbdadm --force create-md #{resource}"
+  command "drbdadm  create-md #{resource}"
   subscribes :run, "template[/etc/drbd.d/#{resource}.res]", :immediately
   notifies :create, "ruby_block[:load drbd module]", :immediately
-  notifies :run, "execute[:bring up the drbd volume]", :immediately
-  notifies :run, "execute[:init drdb volume]", :immediately
+  #notifies :run, "execute[:bring up the drbd volume]", :immediately
+  #notifies :run, "execute[:init drdb volume]", :immediately
   notifies :restart, "service[drbd]", :immediately
   only_if do
     cmd = Mixlib::ShellOut.new("drbd-overview")
     overview = cmd.run_command
     Chef::Log.info overview.stdout
-    overview.stdout.include?("drbd not loaded")
+    overview.stdout.include?("drbd not loaded") ||  overview.stdout.include?("Unconfigured")
   end
   action :nothing
 end
@@ -68,13 +68,15 @@ end
 
 execute ':bring up the drbd volume' do
   command "drbdadm up #{resource}"
+  #subscribes :run, "execute[:create drbd volume]", :immediately
   only_if { node['drbd']['master'] && !node['drbd']['configured'] }
   action :nothing
 end
 
 #claim primary based off of node['drbd']['master']
 execute ":init drdb volume" do
-  command "drbdadm -- --overwrite-data-of-peer primary all"
+  command "drbdadm --force primary all"
+  subscribes :run, "execute[:create drbd volume]", :immediately
   only_if { node['drbd']['master'] && !node['drbd']['configured'] }
   action :nothing
 end
@@ -107,6 +109,7 @@ ruby_block "set drbd configured flag" do
     node.set['drbd']['configured'] = true
     node.save
   end
-  subscribes :create, "execute[mkfs -t #{node['drbd']['fs_type']} #{node['drbd']['dev']}]"
+  subscribes :create, "execute[:create filesystem]"
+  notifies :mount, "mount[#{node['drbd']['mount']}]"
   action :nothing
 end
