@@ -46,7 +46,7 @@ execute ":create drbd volume" do
   notifies :create, "ruby_block[:load drbd module]", :immediately
   notifies :run, "execute[:bring up the drbd volume]", :immediately
   notifies :run, "execute[:init drdb volume]", :immediately
-  notifies :restart, "service[drbd]", :immediately
+  #notifies :restart, "service[drbd]", :immediately
   only_if do
     cmd = Mixlib::ShellOut.new("drbd-overview")
     overview = cmd.run_command
