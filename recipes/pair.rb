@@ -53,11 +53,11 @@ diskless_status ='Diskless/'
 
 #first pass only, initialize drbd
 execute ":create drbd volume" do
-  command "drbdadm  create-md #{resource}"
+  command "drbdadm create-md #{resource}"
   subscribes :run, "template[/etc/drbd.d/#{resource}.res]", :immediately
 #  notifies :create, "ruby_block[:load drbd module]", :immediately
-  notifies :run, "execute[:bring up the drbd volume]", :immediately
-  notifies :run, "execute[:init drdb volume]", :immediately
+  #notifies :run, "execute[:bring up the drbd volume]", :immediately
+  #notifies :run, "execute[:init drdb volume]", :immediately
  
   only_if do
     cmd = Mixlib::ShellOut.new("drbd-overview")
@@ -79,9 +79,9 @@ end
 # end
 
 execute ':bring up the drbd volume' do
-  command "drbdadm up #{resource}"
+  command "drbdadm down #{resource} && drbdadm up #{resource}"
   subscribes :run, "execute[:create drbd volume]", :immediately
-  only_if { node['drbd']['master'] && !node['drbd']['configured'] }
+  only_if { !node['drbd']['configured'] }
   action :nothing
 end
 
