@@ -48,11 +48,8 @@ end
 
 # status string of the unconfigured cluster is like this:
 #  0:pair/0  Connected Secondary/Secondary Diskless/Diskless C r-----
-if node['drbd']['master']
-  diskless_status ='Diskless/'
-else
-  diskless_status ='/Diskless'
-end
+# from the perspective of the current host ie local stat / remote state
+diskless_status ='Diskless/'
 
 #first pass only, initialize drbd
 execute ":create drbd volume" do
