@@ -44,8 +44,8 @@ execute ":create drbd volume" do
   command "drbdadm  create-md #{resource}"
   subscribes :run, "template[/etc/drbd.d/#{resource}.res]", :immediately
   notifies :create, "ruby_block[:load drbd module]", :immediately
-  notifies :run, "execute[:bring up the drbd volume]", :immediately
-  notifies :run, "execute[:init drdb volume]", :immediately
+  #notifies :run, "execute[:bring up the drbd volume]", :immediately
+  #notifies :run, "execute[:init drdb volume]", :immediately
   #notifies :restart, "service[drbd]", :immediately
   only_if do
     cmd = Mixlib::ShellOut.new("drbd-overview")
@@ -76,7 +76,7 @@ end
 #claim primary based off of node['drbd']['master']
 execute ":init drdb volume" do
   command "drbdadm --force primary all"
-  #subscribes :run, "execute[:create drbd volume]", :immediately
+  subscribes :run, "execute[:create drbd volume]", :immediately
   only_if { node['drbd']['master'] && !node['drbd']['configured'] }
   action :nothing
 end
