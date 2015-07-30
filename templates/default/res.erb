@@ -4,7 +4,7 @@ resource <%= @resource %> {
   device    <%= node['drbd']['dev'] %>;
   disk      <%= node['drbd']['disk'] %>;
   meta-disk internal;
-  on <%= node.name %> {
+  on <%= node[:hostname] %> {
     address   <%= node['drbd']['local_ip'] %>:<%= node['drbd']['port'] %>;
   }
   on <%= node['drbd']['remote_host'] %> {
