@@ -46,6 +46,14 @@ directory node['drbd']['mount'] do
   action :create
 end
 
+# status string of the unconfigured cluster is like this:
+#  0:pair/0  Connected Secondary/Secondary Diskless/Diskless C r-----
+if node['drbd']['master']
+  diskless_status ='Diskless/'
+else
+  diskless_status ='/Diskless'
+end
+
 #first pass only, initialize drbd
 execute ":create drbd volume" do
   command "drbdadm  create-md #{resource}"
@@ -58,7 +66,9 @@ execute ":create drbd volume" do
     cmd = Mixlib::ShellOut.new("drbd-overview")
     overview = cmd.run_command
     Chef::Log.info overview.stdout
-    overview.stdout.empty? || overview.stdout.include?("Unconfigured")
+    overview.stdout.empty? || overview.stdout.include?("Unconfigured") 
+      || overview.stdout.include?("Unconfigured") || overview.stdout.include?(diskless_status) 
+
   end
   action :nothing
 end
