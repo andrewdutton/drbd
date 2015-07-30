@@ -58,7 +58,7 @@ execute ":create drbd volume" do
     cmd = Mixlib::ShellOut.new("drbd-overview")
     overview = cmd.run_command
     Chef::Log.info overview.stdout
-    overview.stdout.empty? 
+    overview.stdout.empty? || overview.stdout.include?("Unconfigured")
   end
   action :nothing
 end
