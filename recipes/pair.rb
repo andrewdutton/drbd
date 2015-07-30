@@ -37,38 +37,45 @@ template "/etc/drbd.d/#{resource}.res" do
   owner "root"
   group "root"
   action :create
+  notifies :restart, "service[drbd]", :immediately
+end
+
+
+directory node['drbd']['mount'] do
+  only_if { node['drbd']['master'] && !node['drbd']['configured'] }
+  action :create
 end
 
 #first pass only, initialize drbd
 execute ":create drbd volume" do
   command "drbdadm  create-md #{resource}"
   subscribes :run, "template[/etc/drbd.d/#{resource}.res]", :immediately
-  notifies :create, "ruby_block[:load drbd module]", :immediately
-  #notifies :run, "execute[:bring up the drbd volume]", :immediately
-  #notifies :run, "execute[:init drdb volume]", :immediately
-  #notifies :restart, "service[drbd]", :immediately
+#  notifies :create, "ruby_block[:load drbd module]", :immediately
+  notifies :run, "execute[:bring up the drbd volume]", :immediately
+  notifies :run, "execute[:init drdb volume]", :immediately
+ 
   only_if do
     cmd = Mixlib::ShellOut.new("drbd-overview")
     overview = cmd.run_command
     Chef::Log.info overview.stdout
-    overview.stdout.include?("drbd not loaded") ||  overview.stdout.include?("Unconfigured")
+    overview.stdout.empty? 
   end
   action :nothing
 end
 
-ruby_block ":load drbd module" do
-  block do
-    cmd = Mixlib::ShellOut.new("modprobe drbd")
-    cmd.run_command
-    cmd.error!
-  end
-  not_if { ::File.exists?("/proc/drbd") }
-  action :nothing
-end
+# ruby_block ":load drbd module" do
+#   block do
+#     cmd = Mixlib::ShellOut.new("modprobe drbd")
+#     cmd.run_command
+#     cmd.error!
+#   end
+#   not_if { ::File.exists?("/proc/drbd") }
+#   action :nothing
+# end
 
 execute ':bring up the drbd volume' do
   command "drbdadm up #{resource}"
-  #subscribes :run, "execute[:create drbd volume]", :immediately
+  subscribes :run, "execute[:create drbd volume]", :immediately
   only_if { node['drbd']['master'] && !node['drbd']['configured'] }
   action :nothing
 end
@@ -76,7 +83,7 @@ end
 #claim primary based off of node['drbd']['master']
 execute ":init drdb volume" do
   command "drbdadm --force primary all"
-  subscribes :run, "execute[:create drbd volume]", :immediately
+  subscribes :run, "execute[:bring up the drbd volume]", :immediately
   only_if { node['drbd']['master'] && !node['drbd']['configured'] }
   action :nothing
 end
@@ -89,10 +96,6 @@ execute ":create filesystem" do
   action :nothing
 end
 
-directory node['drbd']['mount'] do
-  only_if { node['drbd']['master'] && !node['drbd']['configured'] }
-  action :create
-end
 
 #mount -t xfs -o rw /dev/drbd0 /shared
 mount node['drbd']['mount'] do
